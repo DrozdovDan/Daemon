@@ -1,6 +1,6 @@
 # DAEMON
 
-Current daemon can be used to periodically execute several commands in the background of a Unix system.
+Current daemon can be used to periodically execute several commands in the background of an Unix system.
 
 ## Installation
 
@@ -63,4 +63,4 @@ cmd parameter1 parameter2 ...
 
 ### Pingall
 
-This command uses to ping all the servers specified in the `/conf/servers.txt` and drop the result in the `/response/ping.csv` file.
+This command is used to ping all the servers specified in the `/conf/servers.txt` and drop the result in the `/response/ping.csv` file.

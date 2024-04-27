@@ -149,20 +149,22 @@ class Daemon:
 			time.sleep(self.sleeptime)
 
 	def pingall(self, servers, outcsv):
-		out = {"Time" : [], "Server" : [], "Status" : []}
+		if not os.path.isfile(self.curdir + outcsv):
+			out = {"Time" : [], "Server" : [], "Status" : []}
+			pd.DataFrame(out).to_csv(self.curdir + outcsv, index=False)
 		param = '-c'
-		file = open(self.curdir + servers, 'r')
-		servers = file.read().split()
-		file.close()
+		with open(self.curdir + servers, 'r') as f:
+			servers = f.read().split()
 		for server in servers:
+			out = {"Time" : [], "Server" : [], "Status" : []}
 			response = os.system(f"ping {param} 1 {server}")
-			out["Time"].append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-			out["Server"].append(server)
+			out['Time'].append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+			out['Server'].append(server)
 			if response == 0:
-				out["Status"].append("UP")
+				out['Status'].append("UP")
 			else:
-				out["Status"].append("DOWN")
-		pd.DataFrame(out).to_csv(self.curdir + outcsv)
+				out['Status'].append("DOWN")
+			pd.DataFrame(out).to_csv(self.curdir + outcsv, mode='a', index=False, header=False)
 
 class ReactFunctionCon:
 
