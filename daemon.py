@@ -5,6 +5,22 @@ import time
 import atexit
 import signal
 import pandas as pd
+from flask import Flask, render_template
+
+app = Flask(__name__, template_folder='template')
+
+apppidfile = None
+
+pingappcsv = None
+
+@app.route('/')
+def display_dataframe():
+	servers_df = pd.DataFrame({"Empty" : []})
+
+	if os.path.isfile(pingappcsv):
+		servers_df = pd.read_csv(pingappcsv)
+
+	return render_template('display_dataframe.html', table=servers_df.to_html(classes='data', index=False))
 
 class Daemon:
 
@@ -137,6 +153,42 @@ class Daemon:
 	    self.stop()
 	    self.start()
 
+	def appstart(self):
+		self.pidfile = apppidfile
+		"""
+		Start the daemon
+		"""
+		# Check for a pidfile to see if the daemon already runs
+		try:
+		    pf = open(self.pidfile,'r')
+		    pid = int(pf.read().strip())
+		    pf.close()
+		except IOError:
+			pid = None
+
+		if pid:
+		    message = "pidfile %s already exist. Daemon already running?\n"
+		    sys.stderr.write(message % self.pidfile)
+		    sys.exit(1)
+
+		# Start the daemon
+		self.daemonize()
+		app.run()
+
+	def appstop(self):
+		"""
+	    Stop the daemon
+	    """
+		self.pidfile = apppidfile
+		self.stop()
+
+	def apprestart(self):
+		"""
+		Restart the daemon
+		"""
+		self.appstop()
+		self.appstart()
+
 	def run(self):
 		while True:
 			for command in self.executions:
@@ -149,14 +201,13 @@ class Daemon:
 			time.sleep(self.sleeptime)
 
 	def pingall(self, servers, outcsv):
+		out = {"Time" : [], "Server" : [], "Status" : []}
 		if not os.path.isfile(self.curdir + outcsv):
-			out = {"Time" : [], "Server" : [], "Status" : []}
 			pd.DataFrame(out).to_csv(self.curdir + outcsv, index=False)
 		param = '-c'
 		with open(self.curdir + servers, 'r') as f:
 			servers = f.read().split()
 		for server in servers:
-			out = {"Time" : [], "Server" : [], "Status" : []}
 			response = os.system(f"ping {param} 1 {server}")
 			out['Time'].append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 			out['Server'].append(server)
@@ -164,7 +215,10 @@ class Daemon:
 				out['Status'].append("UP")
 			else:
 				out['Status'].append("DOWN")
-			pd.DataFrame(out).to_csv(self.curdir + outcsv, mode='a', index=False, header=False)
+		servers_df = pd.DataFrame(out)
+		servers_df.to_csv(self.curdir + outcsv, mode='a', index=False, header=False)
+		servers_df.to_csv(pingappcsv, index=False)
+
 
 class ReactFunctionCon:
 
@@ -179,6 +233,15 @@ class ReactFunctionCon:
 	    
 	def restart(self):
 	    self.__ourdaemon.restart()
+
+	def appstart(self):
+		self.__ourdaemon.appstart()
+
+	def appstop(self):
+		self.__ourdaemon.appstop()
+
+	def apprestart(self):
+		self.__ourdaemon.apprestart()
 
 class DaemonCommandsCon:
 
@@ -201,6 +264,8 @@ if __name__ == "__main__":
 
 	pidfile = os.getcwd() + "/conf/daemon-naprimer.pid"
 
+	apppidfile = os.getcwd() + "/conf/app-daemon.pid"
+
 	commands = os.getcwd() + "/conf/commands.txt"
 
 	stdin = "/dev/null"
@@ -208,6 +273,8 @@ if __name__ == "__main__":
 	stdout = "/dev/null"
 
 	stderr = os.getcwd() + "/conf/stderr.err"
+
+	pingappcsv = os.getcwd() + "/conf/ping.csv"
 
 	sleeptime = 10
 
@@ -230,4 +297,3 @@ if __name__ == "__main__":
 
 			print("usage: %s %s" % (sys.argv[0], reacts))
 			sys.exit(2)
-
