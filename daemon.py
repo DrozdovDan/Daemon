@@ -6,6 +6,11 @@ import atexit
 import signal
 import pandas as pd
 from flask import Flask, render_template
+import matplotlib
+from matplotlib.figure import Figure
+import matplotlib.dates as mdates
+import base64
+from io import BytesIO
 
 app = Flask(__name__, template_folder='template')
 
@@ -13,14 +18,40 @@ apppidfile = None
 
 pingappcsv = None
 
+pinghistsappcsv = None
+
 @app.route('/')
-def display_dataframe():
+def index():
 	servers_df = pd.DataFrame({"Empty" : []})
 
 	if os.path.isfile(pingappcsv):
 		servers_df = pd.read_csv(pingappcsv)
 
-	return render_template('display_dataframe.html', table=servers_df.to_html(classes='data', index=False))
+	plot_data = pd.DataFrame({"Time" : [], "Server" : [], "Status" : []})
+
+	if os.path.isfile(pinghistsappcsv):
+		plot_data = pd.read_csv(pinghistsappcsv)
+
+	plot_data['Time'] = pd.to_datetime(plot_data['Time'])
+	fig = Figure(figsize=(10, 6))
+	ax = fig.subplots()
+	for server, group in plot_data.groupby('Server'):
+		ax.plot(group['Time'], group['Status'], label=server)
+	ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M:%S'))
+	fig.autofmt_xdate(rotation=45)
+	ax.set_yticks([0, 1])
+	ax.legend()
+	ax.set_title('Server Status Over Time')
+	ax.set_xlabel('Time')
+	ax.set_ylabel('Status')
+
+	buf = BytesIO()
+	fig.savefig(buf, format="png")
+	data = base64.b64encode(buf.getbuffer()).decode("ascii")
+
+	return render_template('display_dataframe.html', table=servers_df.to_html(classes='data', index=False), plot_url=f"data:image/png;base64,{data}")
+
+
 
 class Daemon:
 
@@ -204,6 +235,8 @@ class Daemon:
 		out = {"Time" : [], "Server" : [], "Status" : []}
 		if not os.path.isfile(self.curdir + outcsv):
 			pd.DataFrame(out).to_csv(self.curdir + outcsv, index=False)
+		if not os.path.isfile(pinghistsappcsv):
+			pd.DataFrame(out).to_csv(pinghistsappcsv, index=False)
 		param = '-c'
 		with open(self.curdir + servers, 'r') as f:
 			servers = f.read().split()
@@ -212,12 +245,13 @@ class Daemon:
 			out['Time'].append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 			out['Server'].append(server)
 			if response == 0:
-				out['Status'].append("UP")
+				out['Status'].append(1)
 			else:
-				out['Status'].append("DOWN")
+				out['Status'].append(0)
 		servers_df = pd.DataFrame(out)
 		servers_df.to_csv(self.curdir + outcsv, mode='a', index=False, header=False)
 		servers_df.to_csv(pingappcsv, index=False)
+		servers_df.to_csv(pinghistsappcsv, mode='a', index=False, header=False)
 
 
 class ReactFunctionCon:
@@ -275,6 +309,8 @@ if __name__ == "__main__":
 	stderr = os.getcwd() + "/conf/stderr.err"
 
 	pingappcsv = os.getcwd() + "/conf/ping.csv"
+
+	pinghistsappcsv = os.getcwd() + "/conf/pinghist.csv"
 
 	sleeptime = 10
 

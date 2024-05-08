@@ -87,4 +87,5 @@ It also drop the result in `/conf/ping.csv`, which is being used by web app.
 
 ### Web app
 
-This app display the last results of `pingall` command executed by daemon.
+This app display the last results of `pingall` command executed by daemon and draw a graph of all results of `pingall` command executed by daemon.
+Default server: localhost:5000
