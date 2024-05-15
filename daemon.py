@@ -11,6 +11,7 @@ from matplotlib.figure import Figure
 import matplotlib.dates as mdates
 import base64
 from io import BytesIO
+import socket
 
 app = Flask(__name__, template_folder='template')
 
@@ -204,7 +205,7 @@ class Daemon:
 
 		# Start the daemon
 		self.daemonize()
-		app.run()
+		app.run(host=socket.gethostbyname(socket.gethostname()))
 
 	def appstop(self):
 		"""
