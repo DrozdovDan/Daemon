@@ -11,7 +11,6 @@ from matplotlib.figure import Figure
 import matplotlib.dates as mdates
 import base64
 from io import BytesIO
-import socket
 
 app = Flask(__name__, template_folder='template')
 
@@ -185,7 +184,7 @@ class Daemon:
 	    self.stop()
 	    self.start()
 
-	def appstart(self):
+	def appstart(self, server):
 		self.pidfile = apppidfile
 		"""
 		Start the daemon
@@ -205,7 +204,7 @@ class Daemon:
 
 		# Start the daemon
 		self.daemonize()
-		app.run(host=socket.gethostbyname(socket.gethostname()))
+		app.run(host=server)
 
 	def appstop(self):
 		"""
@@ -272,8 +271,8 @@ class ReactFunctionCon:
 	def restart(self):
 	    self.__ourdaemon.restart()
 
-	def appstart(self):
-		self.__ourdaemon.appstart()
+	def appstart(self, server):
+		self.__ourdaemon.appstart(server)
 
 	def appstop(self):
 		self.__ourdaemon.appstop()

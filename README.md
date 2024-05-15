@@ -45,7 +45,7 @@ To restart the daemon use `python daemon.py restart`.
 
 ### Start the web app
 
-To start the web app use `python daemon.py appstart`.
+To start the web app use `python daemon.py appstart <your server>`.
 
 ### Stop
 
