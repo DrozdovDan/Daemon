@@ -85,7 +85,9 @@ This command is used to ping all the servers specified in the `/conf/servers.txt
 
 It also drop the result in `/conf/ping.csv`, which is being used by web app.
 
+It also drop the results in `/conf/pinghist.csv` which contains all the results, but the command deletes all results older then n seconds from the file.
+
 ### Web app
 
-This app display the last results of `pingall` command executed by daemon and draw a graph of all results of `pingall` command executed by daemon.
+This app display the last results of `pingall` command executed by daemon and draw a graph of all results of `pingall` command executed by daemon not older then the last n seconds.
 Default server: localhost:5000

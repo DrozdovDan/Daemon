@@ -1,6 +1,6 @@
 import sys
 import os
-from datetime import datetime
+import datetime
 import time
 import atexit
 import signal
@@ -231,7 +231,7 @@ class Daemon:
 
 			time.sleep(self.sleeptime)
 
-	def pingall(self, servers, outcsv):
+	def pingall(self, servers, outcsv, histtime):
 		out = {"Time" : [], "Server" : [], "Status" : []}
 		if not os.path.isfile(self.curdir + outcsv):
 			pd.DataFrame(out).to_csv(self.curdir + outcsv, index=False)
@@ -242,7 +242,7 @@ class Daemon:
 			servers = f.read().split()
 		for server in servers:
 			response = os.system(f"ping {param} 1 {server}")
-			out['Time'].append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+			out['Time'].append(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 			out['Server'].append(server)
 			if response == 0:
 				out['Status'].append(1)
@@ -250,8 +250,11 @@ class Daemon:
 				out['Status'].append(0)
 		servers_df = pd.DataFrame(out)
 		servers_df.to_csv(self.curdir + outcsv, mode='a', index=False, header=False)
-		servers_df.to_csv(pingappcsv, index=False)
+		servers_df_hist = pd.read_csv(pinghistsappcsv)
+		servers_df_hist = servers_df_hist[pd.to_datetime(servers_df_hist['Time']) >= pd.to_datetime(datetime.datetime.now() - datetime.timedelta(seconds=int(histtime)))]
+		servers_df_hist.to_csv(pinghistsappcsv, index=False)
 		servers_df.to_csv(pinghistsappcsv, mode='a', index=False, header=False)
+		servers_df.to_csv(pingappcsv, index=False)
 
 
 class ReactFunctionCon:
@@ -282,8 +285,8 @@ class DaemonCommandsCon:
 	def __init__(self, ourdaemon):
 	    self.__ourdaemon = ourdaemon
 
-	def pingall(self, servers, outcsv):
-	    self.__ourdaemon.pingall(servers, outcsv)
+	def pingall(self, servers, outcsv, histtime):
+	    self.__ourdaemon.pingall(servers, outcsv, histtime)
 
 def GetReacts(daemon):
 	local = ReactFunctionCon(daemon)

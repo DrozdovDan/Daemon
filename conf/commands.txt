@@ -1,1 +1,1 @@
-pingall /conf/servers.txt /response/ping.csv
+pingall /conf/servers.txt /response/ping.csv 60
