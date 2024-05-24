@@ -34,16 +34,20 @@ def index():
 
 	plot_data['Time'] = pd.to_datetime(plot_data['Time'])
 	fig = Figure(figsize=(10, 6))
-	ax = fig.subplots()
+	ax = fig.subplots(plot_data.groupby('Server').ngroups)
+	i = 0
 	for server, group in plot_data.groupby('Server'):
-		ax.plot(group['Time'], group['Status'], label=server)
-	ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M:%S'))
+		ax[i].plot(group['Time'], group['Status'], label=server)
+		i += 1
 	fig.autofmt_xdate(rotation=45)
-	ax.set_yticks([0, 1])
-	ax.legend()
-	ax.set_title('Server Status Over Time')
-	ax.set_xlabel('Time')
-	ax.set_ylabel('Status')
+	for j in range(i):
+		ax[j].xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M:%S'))
+		ax[j].set_yticks([0, 1])
+		ax[j].legend()
+		ax[j].set_ylabel('Status')
+	ax[-1].set_xlabel('Time')
+	ax[0].set_title('Server Status Over Time')
+	fig.tight_layout()
 
 	buf = BytesIO()
 	fig.savefig(buf, format="png")
@@ -213,12 +217,12 @@ class Daemon:
 		self.pidfile = apppidfile
 		self.stop()
 
-	def apprestart(self):
+	def apprestart(self, server):
 		"""
 		Restart the daemon
 		"""
 		self.appstop()
-		self.appstart()
+		self.appstart(server)
 
 	def run(self):
 		while True:
@@ -233,13 +237,16 @@ class Daemon:
 
 	def pingall(self, servers, outcsv, histtime):
 		out = {"Time" : [], "Server" : [], "Status" : []}
+
 		if not os.path.isfile(self.curdir + outcsv):
 			pd.DataFrame(out).to_csv(self.curdir + outcsv, index=False)
 		if not os.path.isfile(pinghistsappcsv):
 			pd.DataFrame(out).to_csv(pinghistsappcsv, index=False)
+
 		param = '-c'
 		with open(self.curdir + servers, 'r') as f:
 			servers = f.read().split()
+
 		for server in servers:
 			response = os.system(f"ping {param} 1 {server}")
 			out['Time'].append(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
@@ -248,12 +255,28 @@ class Daemon:
 				out['Status'].append(1)
 			else:
 				out['Status'].append(0)
+
 		servers_df = pd.DataFrame(out)
 		servers_df.to_csv(self.curdir + outcsv, mode='a', index=False, header=False)
+
 		servers_df_hist = pd.read_csv(pinghistsappcsv)
 		servers_df_hist = servers_df_hist[pd.to_datetime(servers_df_hist['Time']) >= pd.to_datetime(datetime.datetime.now() - datetime.timedelta(seconds=int(histtime)))]
 		servers_df_hist.to_csv(pinghistsappcsv, index=False)
 		servers_df.to_csv(pinghistsappcsv, mode='a', index=False, header=False)
+
+		last_server_df = None
+		if os.path.isfile(pingappcsv):
+			last_server_df = pd.read_csv(pingappcsv)
+		uptime = []
+		for _, row in servers_df.iterrows():
+			cur_server = None
+			if last_server_df is not None:
+				cur_server = last_server_df[last_server_df['Server'] == row['Server']]
+			if cur_server is not None and (cur_server['Status'] == 1).any():
+				uptime.append(cur_server.iloc[0]['Uptime'] + (pd.to_datetime(row['Time']) - pd.to_datetime(cur_server.iloc[0]['Time'])).total_seconds())
+			else:
+				uptime.append(0)
+		servers_df['Uptime'] = uptime
 		servers_df.to_csv(pingappcsv, index=False)
 
 
@@ -277,8 +300,8 @@ class ReactFunctionCon:
 	def appstop(self):
 		self.__ourdaemon.appstop()
 
-	def apprestart(self):
-		self.__ourdaemon.apprestart()
+	def apprestart(self, server):
+		self.__ourdaemon.apprestart(server)
 
 class DaemonCommandsCon:
 
