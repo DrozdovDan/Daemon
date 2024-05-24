@@ -1,3 +1,5 @@
 # Ignore all files appears in exution
 *.csv
 *.pid
+# Don't change stderr file
+*.err
