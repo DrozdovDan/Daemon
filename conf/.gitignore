@@ -1,2 +1,3 @@
-# Ignore all .csv files
+# Ignore all files appears in exution
 *.csv
+*.pid
