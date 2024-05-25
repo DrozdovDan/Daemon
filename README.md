@@ -1,18 +1,18 @@
 # DAEMON
 
-Current daemon can be used to periodically execute several commands in the background of an Unix system.
+Данный демон предназначен для периодического исполнения некоторого множества комманд в фоновом режиме.
 
-It also can start a web app using Flask.
+В частности он способен собирать информацию о работе некоторого множества серверов в csv файлы и затем отображать эту информацию в веб приложении.
 
-## Installation
+## Установка
 
-Use `git clone` to get your local version of the daemon.
+Используйте `git clone https://github.com/DrozdovDan/Daemon` чтобы установить демона на ваше устройство, затем перейдите в директорию данного 
+демона и используйте команду `pip install -r requirements.txt` для установления зависимостей. Вам также может потребоваться исполнить команду 
+`alias python=python3`. 
 
-## Usage
+## Использование
 
-Before start this daemon make sure to install all requirements using `pip install -r requirements.txt`.
-
-You can manage your own configs of daemon by changing the default settings:
+Чтобы изменить настройки по умолчанию, измените следующие строки в файле `daemon.py`:
 ```python
 pidfile = os.getcwd() + "/conf/daemon-naprimer.pid"
 
@@ -28,66 +28,69 @@ stderr = os.getcwd() + "/conf/stderr.err"
 
 pingappcsv = os.getcwd() + "/conf/ping.csv"
 
+pinghistsappcsv = os.getcwd() + "/conf/pinghist.csv"
+
 sleeptime = 10
 ```
 
-### Start
+### Запуск
 
-To start the daemon use `python daemon.py start`.
+Чтобы запустить демона используйте `python daemon.py start`.
 
-### Stop
+### Остановка
 
-To stop the daemon use `python daemon.py stop`.
+Чтобы остановить демона используйте `python daemon.py stop`.
 
-### Restart
+### Перезапуск
 
-To restart the daemon use `python daemon.py restart`.
+Чтобы перезапустить демона используйте `python daemon.py restart`.
 
-### Start the web app
+### Запуск веб приложения
 
-To start the web app use `python daemon.py appstart <your server>`.
+Чтобы запустить веб приложение используйте `python daemon.py appstart <your server>`.
 
-### Stop
+### Остановка веб приложения
 
-To stop the web app use `python daemon.py appstop`.
+Чтобы остановить веб приложение используйте `python daemon.py appstop`.
 
-### Restart
+### Перезапуск веб приложения
 
-To restart the web app use `python daemon.py apprestart`.
+Чтобы перезапустить веб приложение используйте `python daemon.py apprestart <your server>`.
 
-### Changing the executable commands
+### Добавление и измение исполняемых комманд
 
-If you don't want a command to execute make sure it isn't in your `commands` file.
+Если вы хотите, чтобы некоторая комманда исполнялась, запишите её в файл `./conf/commands` в формате `<cmd> <parameter1> <parameter2> ...`, в 
+противном случае её в данном файле быть не должно.
 
-If you want to add a command, add a code of this command to the `Daemon` as
+Если вы хотите создать новую команду, запишите её код в класс `Daemon` файла `daemon.py` в формате:
 
 ```python
 def cmd(self, parameters):
 	#put your code here
 ```
 
-Then add this command to the `DaemonCommandsCon` as
+Затем добавьте её в класс `DaemonCommandsCon` того же файла в формате:
 
 ```python
 def cmd(self, parameters):
 	self.__ourdaemon.pingall(parameters)
 ```
 
-To make sure the command is executed add it to the `commands` file as
-
-```
-cmd parameter1 parameter2 ...
-```
-
 ### Pingall
 
-This command is used to ping all the servers specified in the `/conf/servers.txt` and append the result in the `/response/ping.csv` file.
+Данная команда используется для получения статуса о работе серверов, указанных по умолчанию в файле `./conf/servers.txt` и складирует эту 
+информацию в файле `./response/ping.csv`.
 
-It also drop the result in `/conf/ping.csv`, which is being used by web app.
+Также эта комманда обновляет данную информацию в файле `./conf/ping.csv`, используемом веб приложением, при чём она так же рассчитывает, какое 
+количество времени подряд каждый сервер даёт положительный ответ.
 
-It also drop the results in `/conf/pinghist.csv` which contains all the results, but the command deletes all results older then n seconds from the file.
+Так же она складирует данную информацию в файле `./conf/pinghist.csv`, используемом веб приложением, при чём она удаляет все данные, которые 
+старше 60 секунд, где 60 секунд является значением по умолчанию и может быть изменено.
 
-### Web app
+В файле `./conf/commands.txt` данная команда должна быть записана в формате `pingall <servers file> <response file> <time to delete old data>`
 
-This app display the last results of `pingall` command executed by daemon and draw a graph of all results of `pingall` command executed by daemon not older then the last n seconds.
-Default server: localhost:5000
+### Веб приложение
+
+Данное приложение используется для отображения последних результатов комманды `pingall`, исполняемой демоном, и отрисовки графика данных, которые 
+не старше соответствующего времени.
+Сервер по умолчанию: localhost:5000

@@ -11,6 +11,7 @@ from matplotlib.figure import Figure
 import matplotlib.dates as mdates
 import base64
 from io import BytesIO
+import socket
 
 app = Flask(__name__, template_folder='template')
 
@@ -19,6 +20,8 @@ apppidfile = None
 pingappcsv = None
 
 pinghistsappcsv = None
+
+curip = None
 
 @app.route('/')
 def index():
@@ -294,13 +297,13 @@ class ReactFunctionCon:
 	def restart(self):
 	    self.__ourdaemon.restart()
 
-	def appstart(self, server):
+	def appstart(self, server=curip):
 		self.__ourdaemon.appstart(server)
 
 	def appstop(self):
 		self.__ourdaemon.appstop()
 
-	def apprestart(self, server):
+	def apprestart(self, server=curip):
 		self.__ourdaemon.apprestart(server)
 
 class DaemonCommandsCon:
@@ -343,6 +346,8 @@ if __name__ == "__main__":
 	daemon = Daemon(pidfile, commands, stdin, stdout, stderr, sleeptime)
 
 	reacts = GetReacts(daemon)
+
+	curip = socket.gethostbyname(socket.gethostname())
 
 	if len(sys.argv) > 1:
 
